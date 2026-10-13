@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscripción de Fechas ART's - Enfoque Montessori</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #27ae60;
+            --bg: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            border-top: 6px solid var(--accent);
+        }
+
+        h1 { color: var(--primary); margin-top: 0; }
+
+        .form-group {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: var(--primary);
+        }
+
+        input[type="text"], input[type="email"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        .materia-card {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--primary);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .materia-title {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            color: var(--primary);
+        }
+
+        .btn-submit {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s;
+        }
+
+        .btn-submit:hover {
+            background: #219150;
+        }
+
+        .btn-submit:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            font-weight: bold;
+            color: var(--primary);
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Selección de Fechas ART's</h1>
+        <p>Apreciados Estudiantes: En nuestro aprendizaje desde el enfoque Montessori, valoramos la elección y la preparación consciente. Selecciona la fecha para la evaluación de cada una de tus 8 asignaturas. <strong>Solo puedes presentar una materia por día y cada espacio tiene un límite estricto de 20 estudiantes.</strong></p>
+    </div>
+
+    <div id="alertBox" class="alert"></div>
+    <div id="loadingBox" class="loading-spinner">Cargando disponibilidad de cupos en tiempo real...</div>
+
+    <form id="artForm" style="display: none;">
+        <!-- Datos Alumno -->
+        <div class="form-group">
+            <label for="estudiante">Nombre Completo del Estudiante *</label>
+            <input type="text" id="estudiante" required placeholder="Ej. Juan Pérez">
+        </div>
+
+        <div class="form-group">
+            <label for="correo">Correo Electrónico *</label>
+            <input type="email" id="correo" required placeholder="estudiante@colegio.edu.co">
+        </div>
+
+        <div class="form-group">
+            <label for="taller">Taller / Grupo *</label>
+            <select id="taller" required>
+                <option value="">-- Selecciona tu Taller --</option>
+                <option value="4A">4A</option>
+                <option value="4B">4B</option>
+                <option value="4C">4C</option>
+                <option value="5A">5A</option>
+                <option value="5B">5B</option>
+            </select>
+        </div>
+
+        <!-- Asignaturas -->
+        <div id="materiasContainer"></div>
+
+        <button type="submit" id="btnSubmit" class="btn-submit">Confirmar y Guardar Elección</button>
+    </form>
+
+    <script>
+        // PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT
+        const URL_GOOGLE_SCRIPT = "PEGA_AQUI_TU_URL_DE_APPS_SCRIPT";
+
+        const MAX_CUPOS = 20;
+
+        const fechasDisponibles = [
+            "LUNES 26 DE OCTUBRE",
+            "MARTES 27 DE OCTUBRE",
+            "MIÉRCOLES 28 DE OCTUBRE",
+            "JUEVES 29 DE OCTUBRE",
+            "MARTES 3 DE NOVIEMBRE",
+            "MIÉRCOLES 4 DE NOVIEMBRE",
+            "JUEVES 5 DE NOVIEMBRE",
+            "VIERNES 6 DE NOVIEMBRE"
+        ];
+
+        const materias = [
+            { id: "matematicas", nombre: "MATEMÁTICAS", fechas: ["MIÉRCOLES 28 DE OCTUBRE (Espacio A)", "MIÉRCOLES 28 DE OCTUBRE (Espacio B)", "MIÉRCOLES 4 DE NOVIEMBRE (Espacio A)", "MIÉRCOLES 4 DE NOVIEMBRE (Espacio B)", "JUEVES 5 DE NOVIEMBRE (Espacio A)", "JUEVES 5 DE NOVIEMBRE (Espacio B)"] },
+            { id: "humanities", nombre: "HUMANITIES", fechas: ["LUNES 26 DE OCTUBRE", "MARTES 27 DE OCTUBRE", "JUEVES 29 DE OCTUBRE", "MARTES 3 DE NOVIEMBRE", "VIERNES 6 DE NOVIEMBRE"] },
+            { id: "pensamiento", nombre: "ANÁLISIS DE PENSAMIENTO", fechas: ["LUNES 26 DE OCTUBRE", "MARTES 27 DE OCTUBRE", "JUEVES 29 DE OCTUBRE", "MARTES 3 DE NOVIEMBRE", "VIERNES 6 DE NOVIEMBRE"] },
+            { id: "fisica", nombre: "FÍSICA", fechas: fechasDisponibles },
+            { id: "biologia", nombre: "BIOLOGÍA", fechas: fechasDisponibles },
+            { id: "quimica", nombre: "QUÍMICA", fechas: fechasDisponibles },
+            { id: "lec", nombre: "LEC Y FRANCÉS", fechas: fechasDisponibles },
+            { id: "language", nombre: "LANGUAGE ARTS", fechas: fechasDisponibles }
+        ];
+
+        let cuposOcupados = {};
+
+        // Cargar registros existentes desde Google Sheets
+        async function cargarCuposGoogleSheets() {
+            try {
+                const response = await fetch(URL_GOOGLE_SCRIPT);
+                const data = await response.json();
+                
+                // Procesar respuestas guardadas
+                data.forEach(row => {
+                    // Índices de columnas de asignaturas en la hoja: 4 a 11
+                    const respuestasMateria = [
+                        { id: 'matematicas', fecha: row[4] },
+                        { id: 'humanities', fecha: row[5] },
+                        { id: 'pensamiento', fecha: row[6] },
+                        { id: 'fisica', fecha: row[7] },
+                        { id: 'biologia', fecha: row[8] },
+                        { id: 'quimica', fecha: row[9] },
+                        { id: 'lec', fecha: row[10] },
+                        { id: 'language', fecha: row[11] }
+                    ];
+
+                    respuestasMateria.forEach(m => {
+                        if (m.fecha) {
+                            const key = `${m.id}_${m.fecha}`;
+                            cuposOcupados[key] = (cuposOcupados[key] || 0) + 1;
+                        }
+                    });
+                });
+
+                document.getElementById('loadingBox').style.display = 'none';
+                document.getElementById('artForm').style.display = 'block';
+                renderForm();
+            } catch (error) {
+                console.error("Error al cargar datos:", error);
+                mostrarAlerta("Error al conectar con Google Sheets. Por favor recarga la página.", "error");
+            }
+        }
+
+        function renderForm() {
+            const container = document.getElementById('materiasContainer');
+            container.innerHTML = '';
+
+            materias.forEach(m => {
+                const card = document.createElement('div');
+                card.className = 'materia-card';
+                
+                let selectOptions = `<option value="">-- Selecciona una fecha --</option>`;
+                
+                m.fechas.forEach(fecha => {
+                    const claveCupo = `${m.id}_${fecha}`;
+                    const inscritos = cuposOcupados[claveCupo] || 0;
+                    const disponibles = MAX_CUPOS - inscritos;
+                    
+                    const disabled = disponibles <= 0 ? 'disabled' : '';
+                    const labelCupo = disponibles <= 0 ? '(AGOTADO)' : `(${disponibles} cupos disponibles)`;
+
+                    selectOptions += `<option value="${fecha}" ${disabled}>${fecha} ${labelCupo}</option>`;
+                });
+
+                card.innerHTML = `
+                    <div class="materia-title">${m.nombre}</div>
+                    <select class="materia-select" data-materia="${m.id}" required onchange="validarSelecciones(this)">
+                        ${selectOptions}
+                    </select>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function validarSelecciones(changedSelect) {
+            const selects = Array.from(document.querySelectorAll('.materia-select'));
+            const fechasSeleccionadas = selects
+                .map(s => s.value.split(' (')[0])
+                .filter(v => v !== "");
+
+            const duplicados = fechasSeleccionadas.filter((item, index) => fechasSeleccionadas.indexOf(item) !== index);
+
+            if (duplicados.length > 0) {
+                mostrarAlerta(`No puedes seleccionar la misma fecha (${duplicados[0]}) para dos materias distintas. Por favor elige otro día.`, 'error');
+                changedSelect.value = "";
+            } else {
+                ocultarAlerta();
+            }
+        }
+
+        function mostrarAlerta(msg, tipo) {
+            const alert = document.getElementById('alertBox');
+            alert.className = `alert alert-${tipo === 'error' ? 'error' : 'success'}`;
+            alert.innerText = msg;
+            alert.style.display = 'block';
+        }
+
+        function ocultarAlerta() {
+            document.getElementById('alertBox').style.display = 'none';
+        }
+
+        // Envío de respuestas a Google Sheets
+        document.getElementById('artForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const btnSubmit = document.getElementById('btnSubmit');
+            btnSubmit.disabled = true;
+            btnSubmit.innerText = "Guardando en Google Sheets...";
+
+            const estudiante = document.getElementById('estudiante').value;
+            const correo = document.getElementById('correo').value;
+            const taller = document.getElementById('taller').value;
+
+            const selects = document.querySelectorAll('.materia-select');
+            let payload = {
+                estudiante,
+                correo,
+                taller,
+                fechaRegistro: new Date().toLocaleString()
+            };
+
+            selects.forEach(s => {
+                const materiaId = s.getAttribute('data-materia');
+                payload[materiaId] = s.value;
+            });
+
+            try {
+                await fetch(URL_GOOGLE_SCRIPT, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                mostrarAlerta('¡Registro guardado con éxito en la hoja de cálculo! Tus fechas han sido reservadas.', 'success');
+                document.getElementById('artForm').reset();
+                setTimeout(() => location.reload(), 2500);
+            } catch (error) {
+                console.error("Error enviando los datos:", error);
+                mostrarAlerta('Ocurrió un error al guardar tu elección. Inténtalo de nuevo.', 'error');
+                btnSubmit.disabled = false;
+                btnSubmit.innerText = "Confirmar y Guardar Elección";
+            }
+        });
+
+        // Inicializar sincronización con Google Sheets
+        cargarCuposGoogleSheets();
+    </script>
+</body>
+</html>
